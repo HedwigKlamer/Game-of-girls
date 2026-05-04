@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GirlyPop Conway's Game of Life 🌸</title>
+<style>
+  :root{
+    --bg: #FFF8FB;
+    --card:#fff;
+    --accent: #FFB7D2;  /* blush */
+    --accent2:#C8F0E6;  /* mint */
+    --accent3:#E9DAFF;  /* lavender */
+    --muted:#A88FAF;
+    --shadow: 0 6px 18px rgba(170,120,160,0.12);
+    --glass: rgba(255,255,255,0.7);
+  }
+  html,body{height:100%;margin:0;font-family:Inter, "Segoe UI", Roboto, system-ui, -apple-system; background: radial-gradient(circle at 10% 10%, #FFF6FA 0%, #FFF8FB 40%, #FFFDF5 100%); color:#3b2b3b;}
+  .wrap{max-width:1100px;margin:28px auto;padding:20px;display:grid;grid-template-columns: 420px 1fr;gap:18px;align-items:start;}
+  .panel{background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow);backdrop-filter: blur(6px);}
+  h1{font-family: "Comic Sans MS", "Baloo 2", system-ui; margin:6px 0 8px; font-size:20px;color:#5a2b47;}
+  p.lead{margin:6px 0 14px;color:#6f4a62;font-size:13px}
+  /* button functionality */
+  button, select{background:linear-gradient(180deg,var(--glass),#fff);border:1px solid rgba(160,120,150,0.12);padding:8px 10px;border-radius:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.04);font-weight:600;}
+  button.pink{background:linear-gradient(180deg,#FFD8E8,#FFB7D2);color:#5a2540}
+  button.small{padding:6px 8px;font-size:13px;border-radius:10px}
+  .explanation{margin-top:12px;}
+  .explanation-content{display:none;margin-top:10px;font-size:13px;color:#50384f;line-height:1.5;}
+  .explanation-content h2{font-size:15px;margin:6px 0;color:#5a2b47;}
+  .explanation-content ul{padding-left:20px;}
+
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  button, select{background:linear-gradient(180deg,var(--glass),#fff);border:1px solid rgba(160,120,150,0.12);padding:8px 10px;border-radius:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.04);font-weight:600;}
+  button.pink{background:linear-gradient(180deg,#FFD8E8,#FFB7D2);color:#5a2540}
+  button.mint{background:linear-gradient(180deg,#D3FFF4,#C8F0E6);color:#1a5a50}
+  .small{padding:6px 8px;font-size:13px;border-radius:10px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .canvas-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+  canvas{background:linear-gradient(180deg,#FFF #FFF8FF);border-radius:12px;box-shadow:inset 0 2px 10px rgba(200,170,200,0.04);border:6px solid rgba(255,255,255,0.6)}
+  .grid-info{font-size:12px;color:var(--muted);margin-top:6px}
+  .stamp-list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+  .stamp-btn{display:flex;gap:8px;align-items:center;padding:8px;border-radius:10px;background:linear-gradient(180deg,#fff,#FEF7FF);border:1px dashed rgba(180,140,170,0.12);}
+  .stamp-preview{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#FFF,#FFF7FF)}
+  .credit{font-size:11px;color:#947288;margin-top:8px}
+  footer{grid-column:1/-1;text-align:center;margin-top:16px;color:#7b5d70;font-size:12px}
+  /* cute dots background for left panel */
+  .panel.left{background-image:
+    radial-gradient(#FFEEF6 1px, transparent 1px),
+    radial-gradient(#F0FFF9 1px, transparent 1px);
+    background-size: 16px 16px, 32px 32px;
+    background-position: 0 0, 8px 8px;
+  }
+  /* rounded cell look */
+  .legend{display:flex;gap:8px;align-items:center;font-size:13px}
+  .legend .sw{width:16px;height:16px;border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel left">
+    <h1>GirlyPop Life 🌸</h1>
+    <p class="lead">Play with pastel pixels and stamp cute shapes on the board. Click to stamp, press space to start/pause. Perfect for making tiny living patterns that grow and fizz like tiny pixel parties!</p>
+    
+    
+  
+    <div class="controls toolbar">
+      <button id="startBtn" class="pink small">Play ▶</button>
+      <button id="stepBtn" class="small">Step</button>
+      <button id="clearBtn" class="small">Clear</button>
+      <button id="randBtn" class="small">Randomize</button>
+      <select id="sizeSelect" title="Grid size">
+        <option value="30">Cozy 30×30</option>
+        <option value="40" selected>Pretty 40×40</option>
+        <option value="60">Spacious 60×60</option>
+      </select>
+    </div>
+
+    <div class="controls">
+      <label style="font-size:13px;color:#6b465f">Speed</label>
+      <input id="speed" type="range" min="50" max="700" value="220" style="flex:1">
+      <label style="font-size:13px;width:40px;text-align:right" id="speedVal">220ms</label>
+    </div>
+
+    
+
+    <div style="margin-top:12px">
+      <strong style="font-size:14px;color:#5a2b47">Stamps (click to pick, then click board)</strong>
+      <div class="stamp-list" id="stamps">
+        <!-- Stamp buttons created by JS -->
+      </div>
+      <div class="credit">Tip: press <kbd>space</kbd> to play/pause. Click & drag to paint.</div>
+    </div>
+
+    <div class="explanation"></div>
+      <button id="toggleExp" class="pink small">✨ What is the game of life?</button>
+      <div id="expContent" class="explanation-content">
+        <h2>Hey sparkle scientist! ✨</h2>
+        <p>Imagine a tiny world made of lots of square tiles (we call them <b>cells</b>). Each cell can be <b>alive</b> (a cute pastel dot) or <b>dead</b> (empty). The whole world changes by a simple set of rules — no boss, just the rules!</p>
+        <h2>The rules (super quick)</h2>
+        <ul>
+          <li>Alive + 2 or 3 friends → stays alive 💕</li>
+          <li>Alive + too few → lonely, it dies 😢</li>
+          <li>Alive + too many → crowded, it dies 😵</li>
+          <li>Dead + exactly 3 neighbors → new life is born ✨</li>
+        </ul>
+
+
+        <h2>Why it’s cool</h2>
+        <ul>
+          <li>Like pixel ecosystems that grow and dance 🌱</li>
+          <li>You can draw stamps and see them wiggle 🎨</li>
+          <li>It’s art + science at the same time 💡</li>
+        </ul>
+      </div>
+
+    <div style="margin-top:12px">
+      <strong style="font-size:14px;color:#5a2b47">Save & Share</strong>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="downloadBtn" class="small">Download PNG</button>
+        <button id="copyBtn" class="small">Copy Pattern</button>
+      </div>
+      <div class="credit">Patterns copy as a small text string you can paste later.</div>
+    </div>
+
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <strong style="font-size:16px;color:#5a2b47">Canvas</strong>
+        <div class="grid-info" id="gridInfo">40 × 40</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;color:#865572">Selected stamp: <span id="selStamp">None</span></div>
+      </div>
+    </div>
+
+    
+
+    <div class="canvas-wrap" style="margin-top:12px">
+      <canvas id="lifeCanvas" width="640" height="640"></canvas>
+      <div style="display:flex;gap:12px;align-items:center;width:100%;justify-content:center;margin-top:8px">
+        <button id="zoomIn" class="small">Zoom +</button>
+        <button id="zoomOut" class="small">Zoom −</button>
+        <button id="toggleGrid" class="small">Toggle Grid</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('toggleExp').addEventListener('click',()=>{
+  const exp = document.getElementById('expContent');
+  exp.style.display = exp.style.display==='block' ? 'none' : 'block';
+  });
+
+  /* ======== GirlyPop Game of Life ========
+     Playable, pastel-styled, stamping shapes.
+     Controls: Play/Pause, Step, Randomize, Clear, Stamps
+  =========================================*/
+
+  // --- Utility / initial state ---
+  const canvas = document.getElementById('lifeCanvas');
+  const ctx = canvas.getContext('2d', {alpha:false});
+  let gridSize = parseInt(document.getElementById('sizeSelect').value,10);
+  let cols = gridSize, rows = gridSize;
+  let cellSize = Math.floor(canvas.width / cols);
+  let grid = makeGrid(cols,rows);
+  let running = false;
+  let interval = null;
+  let stepMillis = parseInt(document.getElementById('speed').value,10);
+  let showGrid = true;
+  let selectedStamp = null;
+  let painting = false;
+
+  // Pastel palette
+  const aliveGradColors = [{c1:'#FFEEF7',c2:'#FFD8E8'},{c1:'#E6FFF7',c2:'#C8F0E6'},{c1:'#F6EEFF',c2:'#E9DAFF'}];
+
+  // --- Predefined stamps as arrays of [x,y] offsets ---
+  // coordinates center-based; stamps will be centered on click
+  const STAMPS = {
+    'Beehive': {
+      title:'Beehive',
+      data:[
+        [0,0],[1,0],[-1,1],[0,1],[1,1],[2,1],[0,2],[1,2]
+      ],
+      previewColor: aliveGradColors[0]
+    },
+    'Stars': {
+      title:'Stars',
+      data:[
+        [0,-1],[1,-1],
+        [1,0],
+        [-1,1],[0,1],[1,1]
+      ],
+      previewColor: aliveGradColors[1]
+    },
+    'Toy Ray-Gun': {
+      title:'Toy Ray-Gun',
+      data:[
+        [-2,0],[-1,0],[0,0],[1,0],[2,0],[2,-1],[2,1],[3, -1],[3,0],[3,1]
+      ],
+      previewColor: aliveGradColors[2]
+    },
+    'Hamster': {
+      title:'Hamster',
+      data:[
+        [0,0],
+        [-2,-4],[2,-4],
+        [-3,-3],[-1,-3],[0,-3],[1,-3],[3,-3],
+        [-3,-2],[3,-2],
+        [-4,-1],[-2,-1],[2,-1],[4,-1],
+        [-4,0],[4,0],
+        [-3,1],[3,1],
+        [-3,2],[3,2],
+        [-3,3],[0,3],[3,3],
+        [-2,4],[-1,4],[1,4],[2,4]
+      ],
+      previewColor: aliveGradColors[0]
+    }
+  };
+
+  // --- Make stamp buttons ---
+  const stampsDiv = document.getElementById('stamps');
+  Object.keys(STAMPS).forEach(key=>{
+    const btn = document.createElement('div');
+    btn.className='stamp-btn';
+    btn.title = STAMPS[key].title;
+    btn.innerHTML = `<div class="stamp-preview"></div><div style="font-weight:700">${key}</div>`;
+    btn.onclick = ()=>{ selectedStamp = key; document.getElementById('selStamp').innerText = key; highlightSelected(); };
+    stampsDiv.appendChild(btn);
+
+    // draw preview
+    const prev = btn.querySelector('.stamp-preview');
+    const pctx = createPreviewCanvas(prev, STAMPS[key].previewColor);
+    drawStampPreview(pctx, STAMPS[key].data);
+  });
+
+  function highlightSelected(){
+    Array.from(stampsDiv.children).forEach(child=>{
+      child.style.border = (child.querySelector('div+div').innerText === selectedStamp) ? '2px solid rgba(150,90,140,0.12)' : '1px dashed rgba(180,140,170,0.12)';
+      child.style.boxShadow = (child.querySelector('div+div').innerText === selectedStamp) ? '0 8px 30px rgba(200,140,170,0.06)' : '';
+    });
+  }
+
+  function createPreviewCanvas(el, color){
+    // create a small offscreen painter
+    const cvs = document.createElement('canvas');
+    cvs.width = el.clientWidth; cvs.height = el.clientHeight;
+    el.appendChild(cvs);
+    return cvs.getContext('2d');
+  }
+
+  function drawStampPreview(pctx, coords){
+    const w = pctx.canvas.width, h = pctx.canvas.height;
+    pctx.clearRect(0,0,w,h);
+    pctx.save();
+    pctx.translate(w/2, h/2);
+    const s = Math.min(w,h)/5;
+    pctx.fillStyle = '#FFEEF7';
+    coords.forEach(([x,y])=>{
+      roundRect(pctx, x*s - s/2, y*s - s/2, s-2, s-2, 4);
+      pctx.fill();
+    });
+    pctx.restore();
+  }
+
+  // --- Grid helpers ---
+  function makeGrid(c,r){
+    const a = new Array(r);
+    for(let y=0;y<r;y++){ a[y] = new Array(c).fill(0); }
+    return a;
+  }
+
+  function randomizeGrid(){
+    for(let y=0;y<rows;y++) for(let x=0;x<cols;x++) grid[y][x] = (Math.random() > 0.75) ? 1 : 0;
+    draw();
+  }
+
+  function clearGrid(){ grid = makeGrid(cols, rows); draw(); }
+
+  function exportPNG(){
+    const dataUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a'); a.href=dataUrl; a.download='girlylife.png'; a.click();
+  }
+
+  function copyPatternString(){
+    // simple RLE-lite: list of alive coords
+    const parts=[];
+    for(let y=0;y<rows;y++) for(let x=0;x<cols;x++) if(grid[y][x]) parts.push(`${x},${y}`);
+    const s = parts.join(';');
+    navigator.clipboard?.writeText(s).then(()=>alert('Pattern copied! Paste to import.'), ()=>alert('Could not copy.'));
+  }
+
+  function importPatternString(s){
+    // parse format x,y;x,y...
+    clearGrid();
+    s.split(';').forEach(pair=>{
+      const [x,y] = pair.split(',').map(n=>parseInt(n,10));
+      if(!isNaN(x) && !isNaN(y) && y>=0 && x>=0 && y<rows && x<cols) grid[y][x]=1;
+    });
+    draw();
+  }
+
+  // --- Life logic ---
+  function countNeighbors(g,x,y){
+    let count=0;
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      if(dx===0 && dy===0) continue;
+      const nx = x+dx, ny = y+dy;
+      if(nx>=0 && nx<cols && ny>=0 && ny<rows) count += g[ny][nx];
+    }
+    return count;
+  }
+
+  function step(){
+    const next = makeGrid(cols, rows);
+    for(let y=0;y<rows;y++){
+      for(let x=0;x<cols;x++){
+        const n = countNeighbors(grid,x,y);
+        if(grid[y][x] === 1){
+          next[y][x] = (n === 2 || n === 3) ? 1 : 0;
+        } else {
+          next[y][x] = (n === 3) ? 1 : 0;
+        }
+      }
+    }
+    grid = next;
+    draw();
+  }
+
+  // --- Drawing ---
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const g = ctx.createLinearGradient(0,0,0,canvas.height);
+    // pastel background wash
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    const cs = cellSize;
+    for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+      const alive = grid[y][x];
+      const px = x*cs, py = y*cs;
+      if(alive){
+        // pick a gentle gradient per cell for variety
+        const p = aliveGradColors[(x+y) % aliveGradColors.length];
+        const g2 = ctx.createLinearGradient(px,py,px+cs,py+cs);
+        g2.addColorStop(0,p.c1); g2.addColorStop(1,p.c2);
+        roundRect(ctx, px+2, py+2, cs-4, cs-4, Math.max(2, cs/6));
+        ctx.fillStyle = g2;
+        ctx.fill();
+      } else {
+        // faint dead cell effect
+        ctx.fillStyle = 'rgba(255,255,255,0.0)';
+        roundRect(ctx, px+1, py+1, cs-2, cs-2, Math.max(2, cs/12));
+        ctx.fill();
+      }
+    }
+
+    if(showGrid){
+      ctx.strokeStyle = 'rgba(150,110,140,0.06)';
+      ctx.lineWidth = 1;
+      for(let x=0;x<=cols;x++){ ctx.beginPath(); ctx.moveTo(x*cs+0.5,0); ctx.lineTo(x*cs+0.5, canvas.height); ctx.stroke(); }
+      for(let y=0;y<=rows;y++){ ctx.beginPath(); ctx.moveTo(0,y*cs+0.5); ctx.lineTo(canvas.width, y*cs+0.5); ctx.stroke(); }
+    }
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // --- Interaction: click to stamp or paint ---
+  function canvasToCell(ev){
+    const rect = canvas.getBoundingClientRect();
+    const cx = Math.floor((ev.clientX - rect.left) / cellSize);
+    const cy = Math.floor((ev.clientY - rect.top) / cellSize);
+    return [cx,cy];
+  }
+
+  canvas.addEventListener('mousedown', (ev)=>{
+    painting = true;
+    const [cx,cy] = canvasToCell(ev);
+    if(selectedStamp) placeStamp(selectedStamp,cx,cy);
+    else toggleCell(cx,cy);
+  });
+  canvas.addEventListener('mousemove', (ev)=>{
+    if(!painting) return;
+    const [cx,cy] = canvasToCell(ev);
+    if(selectedStamp) placeStamp(selectedStamp,cx,cy);
+    else paintCell(cx,cy);
+  });
+  window.addEventListener('mouseup', ()=>{ painting=false; });
+
+  function paintCell(cx,cy){
+    if(cx>=0 && cy>=0 && cx<cols && cy<rows){ grid[cy][cx]=1; draw(); }
+  }
+  function toggleCell(cx,cy){
+    if(cx>=0 && cy>=0 && cx<cols && cy<rows){ grid[cy][cx] = grid[cy][cx] ? 0 : 1; draw(); }
+  }
+
+  function placeStamp(name, cx, cy){
+    const s = STAMPS[name];
+    s.data.forEach(([ox,oy])=>{
+      const x = cx+ox, y = cy+oy;
+      if(x>=0 && y>=0 && x<cols && y<rows) grid[y][x]=1;
+    });
+    draw();
+  }
+
+  // --- Controls wiring ---
+  document.getElementById('startBtn').onclick = ()=>{
+    running = !running;
+    if(running){
+      document.getElementById('startBtn').innerText = 'Pause ❚❚';
+      document.getElementById('startBtn').classList.remove('pink');
+      interval = setInterval(step, stepMillis);
+    } else {
+      document.getElementById('startBtn').innerText = 'Play ▶';
+      document.getElementById('startBtn').classList.add('pink');
+      clearInterval(interval);
+    }
+  };
+  document.getElementById('stepBtn').onclick = ()=>{ step(); };
+  document.getElementById('clearBtn').onclick = ()=>{ clearGrid(); };
+  document.getElementById('randBtn').onclick = ()=>{ randomizeGrid(); };
+  document.getElementById('speed').oninput = (e)=>{ stepMillis = parseInt(e.target.value,10); document.getElementById('speedVal').innerText = stepMillis+'ms'; if(running){ clearInterval(interval); interval = setInterval(step, stepMillis); } };
+  document.getElementById('sizeSelect').onchange = (e)=>{
+    gridSize = parseInt(e.target.value,10);
+    cols = rows = gridSize;
+    cellSize = Math.floor(canvas.width / cols);
+    grid = makeGrid(cols,rows);
+    document.getElementById('gridInfo').innerText = cols + ' × ' + rows;
+    draw();
+  };
+  document.getElementById('downloadBtn').onclick = exportPNG;
+  document.getElementById('copyBtn').onclick = copyPatternString;
+  document.getElementById('zoomIn').onclick = ()=>{ cellSize = Math.min(40, cellSize+2); draw(); };
+  document.getElementById('zoomOut').onclick = ()=>{ cellSize = Math.max(4, cellSize-2); draw(); };
+  document.getElementById('toggleGrid').onclick = ()=>{ showGrid = !showGrid; draw(); };
+
+  // allow spacebar to toggle
+  window.addEventListener('keydown', (e)=>{ if(e.code === 'Space'){ e.preventDefault(); document.getElementById('startBtn').click(); } });
+
+  // init
+  document.getElementById('gridInfo').innerText = cols + ' × ' + rows;
+  draw();
+  randomizeGrid();
+
+  // expose import for clipboard demo
+  window.importPatternString = importPatternString;
+</script>
+</body>
+</html>
